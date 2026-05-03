@@ -3,27 +3,8 @@
 import './globals.css'
 import Sidebar from '@/components/Sidebar'
 import AuthWrapper from '@/components/AuthWrapper'
-import { useEffect } from 'react'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const listenerPromise = (async () => {
-      const { App } = await import('@capacitor/app');
-      
-      return await App.addListener('backButton', ({ canGoBack }) => {
-        if (!canGoBack) {
-          App.exitApp();
-        } else {
-          window.history.back();
-        }
-      });
-    })();
-
-    return () => {
-      listenerPromise.then(handle => handle.remove());
-    };
-  }, []);
-
   return (
     <html lang="pt-br" className="overscroll-none select-none">
       <head>

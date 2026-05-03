@@ -1,5 +1,9 @@
 import ProntuarioPacienteClient from '@/components/ProntuarioPacienteClient';
 
+export function generateStaticParams() {
+  return [];
+}
+
 export default async function ProntuarioPage({
   params,
 }: {
