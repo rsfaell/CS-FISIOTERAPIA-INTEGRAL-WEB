@@ -1,39 +1,26 @@
 'use client'
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, use, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClients';
 import Link from 'next/link';
+import Image from 'next/image';
+
+interface Pagamento {
+  valor_consulta: number;
+  data: string;
+  forma_pagamento: string;
+  status: string;
+}
 
 export default function FinanceiroDetalhado({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
   const id = resolvedParams?.id;
 
-  const [paciente, setPaciente] = useState<any>(null);
+  const [paciente, setPaciente] = useState<{ nome: string } | null>(null);
   const [metricas, setMetricas] = useState({ dia: 0, semana: 0, mes: 0, ano: 0 });
-  const [pagamentos, setPagamentos] = useState<any[]>([]);
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [carregando, setCarregando] = useState(true);
 
-  async function carregarFinanceiro() {
-    try {
-      setCarregando(true);
-      // Dados do Paciente
-      const { data: p } = await supabase.from('pacientes').select('nome').eq('id', id).single();
-      if (p) setPaciente(p);
-
-      // Dados da Agenda (Financeiro)
-      const { data: sessoes } = await supabase
-        .from('agenda')
-        .select('valor_consulta, data, forma_pagamento, status')
-        .eq('paciente_id', id)
-        .eq('status', 'finalizado'); // Apenas o que já foi faturado
-
-      if (sessoes) {
-        setPagamentos(sessoes);
-        calcularPeriodos(sessoes);
-      }
-    } finally { setCarregando(false); }
-  }
-
-  function calcularPeriodos(dados: any[]) {
+  const calcularPeriodos = useCallback((dados: Pagamento[]) => {
     const hoje = new Date();
     const totais = { dia: 0, semana: 0, mes: 0, ano: 0 };
 
@@ -57,9 +44,32 @@ export default function FinanceiroDetalhado({ params }: { params: Promise<{ id: 
     });
 
     setMetricas(totais);
-  }
+  }, []);
 
-  useEffect(() => { if (id) carregarFinanceiro(); }, [id]);
+  const carregarFinanceiro = useCallback(async () => {
+    try {
+      setCarregando(true);
+      if (!id) return;
+      // Dados do Paciente
+      const { data: p } = await supabase.from('pacientes').select('nome').eq('id', id).single();
+      if (p) setPaciente(p);
+
+      // Dados da Agenda (Financeiro)
+      const { data: sessoes } = await supabase
+        .from('agenda')
+        .select('valor_consulta, data, forma_pagamento, status')
+        .eq('paciente_id', id)
+        .eq('status', 'finalizado');
+
+      if (sessoes) {
+        const pagamentosData = sessoes as Pagamento[];
+        setPagamentos(pagamentosData);
+        calcularPeriodos(pagamentosData);
+      }
+    } finally { setCarregando(false); }
+  }, [id, calcularPeriodos]);
+
+  useEffect(() => { carregarFinanceiro(); }, [carregarFinanceiro]);
 
   if (carregando) return <div className="flex h-screen items-center justify-center bg-white font-black text-teal-600 animate-pulse text-xs uppercase tracking-widest">Calculando Rendimentos...</div>;
 
@@ -67,7 +77,7 @@ export default function FinanceiroDetalhado({ params }: { params: Promise<{ id: 
     <div className="relative min-h-screen bg-slate-50/30 overflow-hidden flex flex-col font-sans">
       {/* LOGO BACKGROUND */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-10 opacity-[0.05] grayscale">
-        <img src="/logocs.png" alt="" className="w-full max-w-2xl object-contain" />
+        <Image src="/logocs.png" alt="" width={600} height={600} className="w-full max-w-2xl object-contain" />
       </div>
 
       <div className="relative z-10">

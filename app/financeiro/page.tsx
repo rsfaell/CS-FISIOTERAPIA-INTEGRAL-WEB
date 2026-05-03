@@ -1,11 +1,21 @@
 'use client'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClients';
+import Image from 'next/image';
 
 type FiltroPeriodo = 'dia' | 'semana' | 'mes' | 'ano';
 
+interface AgendamentoFinanceiro {
+  id: string;
+  data: string;
+  status: string;
+  valor_consulta: number;
+  forma_pagamento: string;
+  pacientes: { id: string; nome: string } | null;
+}
+
 export default function FinanceiroCompleto() {
-  const [agendamentos, setAgendamentos] = useState<any[]>([]);
+  const [agendamentos, setAgendamentos] = useState<AgendamentoFinanceiro[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [periodo, setPeriodo] = useState<FiltroPeriodo>('mes');
   const [dataSelecionada, setDataSelecionada] = useState(new Date().toISOString().split('T')[0]);
@@ -16,19 +26,19 @@ export default function FinanceiroCompleto() {
 
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [novoStatus, setNovoStatus] = useState('');
-  const [novoValor, setNovoValor] = useState('');
+  const [novoValor, setNovoValor] = useState<number>(0);
   const [novoPagamento, setNovoPagamento] = useState('');
 
   // Agrupamento por tipo de pagamento
   const totaisPorTipo = agendamentos
     .filter(item => item.status === 'finalizado')
-    .reduce((acc: any, item) => {
+    .reduce((acc: Record<string, number>, item) => {
       const tipo = item.forma_pagamento || 'não definido';
       acc[tipo] = (acc[tipo] || 0) + (Number(item.valor_consulta) || 0);
       return acc;
     }, {});
 
-  async function carregarDados() {
+  const carregarDados = useCallback(async () => {
     setCarregando(true);
     const inicio = new Date(dataSelecionada + 'T00:00:00');
     const fim = new Date(dataSelecionada + 'T23:59:59');
@@ -54,18 +64,18 @@ export default function FinanceiroCompleto() {
       .order('data', { ascending: false });
 
     if (!error && data) {
-      setAgendamentos(data);
+      setAgendamentos(data as unknown as AgendamentoFinanceiro[]);
       const recebido = data.filter(i => i.status === 'finalizado').reduce((acc, item) => acc + (Number(item.valor_consulta) || 0), 0);
       const previsto = data.filter(i => i.status === 'agendado').reduce((acc, item) => acc + (Number(item.valor_consulta) || 0), 0);
       setMetricas({ recebido, previsto, total: recebido + previsto });
     }
     setCarregando(false);
-  }
+  }, [dataSelecionada, periodo]);
 
   async function salvarEdicao(id: string) {
     const eFalta = novoStatus === 'faltou';
     const eGratis = novoPagamento === 'gratis';
-    const valorFinal = (eFalta || eGratis) ? 0 : Number(novoValor);
+    const valorFinal = (eFalta || eGratis) ? 0 : novoValor;
     
     const { error } = await supabase
       .from('agenda')
@@ -79,12 +89,12 @@ export default function FinanceiroCompleto() {
     if (!error) { setEditandoId(null); carregarDados(); }
   }
 
-  useEffect(() => { carregarDados(); }, [periodo, dataSelecionada]);
+  useEffect(() => { carregarDados(); }, [carregarDados]);
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col font-sans bg-white">
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-10 select-none opacity-[0.08]">
-        <img src="/logocs.png" alt="" className="w-full max-w-2xl grayscale object-contain" />
+        <Image src="/logocs.png" alt="" width={600} height={600} className="w-full max-w-2xl grayscale object-contain" />
       </div>
 
       <div className="relative z-10 flex flex-col h-full w-full">
@@ -133,7 +143,7 @@ export default function FinanceiroCompleto() {
           <div className="w-full bg-slate-50/50 border-b border-slate-100 p-6 animate-in slide-in-from-top duration-300 overflow-hidden">
             <div className="max-w-5xl mx-auto flex flex-wrap gap-4">
               {Object.keys(totaisPorTipo).length > 0 ? (
-                Object.entries(totaisPorTipo).map(([tipo, valor]: [any, any]) => (
+                Object.entries(totaisPorTipo).map(([tipo, valor]) => (
                   <div key={tipo} className="bg-white border border-slate-100 px-6 py-4 rounded-[22px] flex items-center gap-4 min-w-[180px] shadow-sm">
                     <div className="w-2 h-2 rounded-full bg-teal-500"></div>
                     <div>
@@ -182,7 +192,7 @@ export default function FinanceiroCompleto() {
                           {novoPagamento !== 'gratis' && (
                             <div className="space-y-1 animate-in slide-in-from-top-1">
                               <label className="text-[9px] font-black text-slate-400 uppercase ml-2 tracking-widest">Valor</label>
-                              <input type="number" aria-label="Valor" className="w-full p-3 bg-white rounded-xl text-xs font-bold border border-slate-100 outline-none" value={novoValor} onChange={(e) => setNovoValor(e.target.value)} />
+                              <input type="number" aria-label="Valor" className="w-full p-3 bg-white rounded-xl text-xs font-bold border border-slate-100 outline-none" value={novoValor} onChange={(e) => setNovoValor(Number(e.target.value))} />
                             </div>
                           )}
                         </>

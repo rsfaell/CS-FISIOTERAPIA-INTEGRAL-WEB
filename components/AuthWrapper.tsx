@@ -1,9 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClients';
+import { Session } from '@supabase/supabase-js';
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [modoLogin, setModoLogin] = useState(false);
   const [email, setEmail] = useState('');
@@ -64,9 +66,11 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         
         {/* MARCA D'ÁGUA CENTRALIZADA */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none p-10">
-          <img 
+          <Image 
             src="/logocs.png" 
             alt="" 
+            width={768}
+            height={768}
             className="w-full max-w-3xl opacity-[0.06] grayscale object-contain" 
           />
         </div>
@@ -92,7 +96,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
               <div className="text-left space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase ml-4 tracking-widest">E-mail Profissional</label>
                 <input 
-                  type="email" 
+                  type="email"
                   required
                   className="w-full p-4 bg-slate-50 border border-slate-100 rounded-[22px] text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                   placeholder="DIGITE SEU E-MAIL"
@@ -104,7 +108,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
               <div className="text-left space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase ml-4 tracking-widest">Senha de Acesso</label>
                 <input 
-                  type="password" 
+                  type="password"
                   required
                   className="w-full p-4 bg-slate-50 border border-slate-100 rounded-[22px] text-xs font-bold outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                   placeholder="••••••••"

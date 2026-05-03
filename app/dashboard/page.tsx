@@ -1,28 +1,31 @@
 'use client'
-import { useEffect, useState, use } from 'react';
+export const dynamic = 'force-dynamic';
+import { useEffect, useState, use, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClients';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function DetalhesPaciente({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const id = resolvedParams?.id;
 
-  const [paciente, setPaciente] = useState<any>(null);
+  const [paciente, setPaciente] = useState<{ nome: string } | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  useEffect(() => {
-    async function carregarDados() {
-      try {
-        setCarregando(true);
-        if (!id) return;
-        const { data: p } = await supabase.from('pacientes').select('*').eq('id', id).single();
-        if (p) setPaciente(p);
-      } catch (err) { console.error(err); } 
-      finally { setCarregando(false); }
-    }
-    carregarDados();
+  const carregarDados = useCallback(async () => {
+    try {
+      setCarregando(true);
+      if (!id) return;
+      const { data: p } = await supabase.from('pacientes').select('*').eq('id', id).single();
+      if (p) setPaciente(p as { nome: string });
+    } catch (err) { console.error(err); } 
+    finally { setCarregando(false); }
   }, [id]);
+
+  useEffect(() => {
+    carregarDados();
+  }, [carregarDados]);
 
   // Função de redirecionamento direto
   const irParaAgenda = () => {
@@ -38,11 +41,12 @@ export default function DetalhesPaciente({ params }: { params: Promise<{ id: str
       
       {/* MARCA D'ÁGUA (Opacidade 0.08 e centralizada) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-10 select-none">
-        <img 
+        <Image 
           src="/logocs.png" 
           alt="" 
+          width={600}
+          height={600}
           className="w-full max-w-2xl opacity-[0.08] grayscale object-contain"
-          onError={(e) => { e.currentTarget.style.display = 'none'; }}
         />
       </div>
 

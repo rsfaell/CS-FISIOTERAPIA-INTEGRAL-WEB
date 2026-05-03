@@ -1,10 +1,18 @@
 'use client'
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClients';
 import Link from 'next/link';
+import Image from 'next/image';
+
+interface Paciente {
+  id: string;
+  nome: string;
+  cpf: string;
+  telefone: string;
+}
 
 export default function ListaPacientes() {
-  const [pacientes, setPacientes] = useState<any[]>([]);
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
   
@@ -14,7 +22,7 @@ export default function ListaPacientes() {
   const [novoCpf, setNovoCpf] = useState('');
   const [novoTelefone, setNovoTelefone] = useState('');
 
-  async function carregarPacientes() {
+  const carregarPacientes = useCallback(async () => {
     try {
       setCarregando(true);
       const { data, error } = await supabase
@@ -23,13 +31,14 @@ export default function ListaPacientes() {
         .order('nome', { ascending: true });
       
       if (error) throw error;
-      setPacientes(data || []);
-    } catch (err: any) {
-      console.error("Erro ao carregar lista:", err.message);
+      setPacientes((data as unknown as Paciente[]) || []);
+    } catch (err) {
+      const error = err as Error;
+      console.error("Erro ao carregar lista:", error.message);
     } finally {
       setCarregando(false);
     }
-  }
+  }, []);
 
   async function handleSalvarPaciente(e: React.FormEvent) {
     e.preventDefault();
@@ -49,12 +58,13 @@ export default function ListaPacientes() {
       setNovoTelefone('');
       setIsModalOpen(false);
       carregarPacientes(); 
-    } catch (err: any) {
-      alert("Erro ao cadastrar: " + err.message);
+    } catch (err) {
+      const error = err as Error;
+      alert("Erro ao cadastrar: " + error.message);
     }
   }
 
-  useEffect(() => { carregarPacientes(); }, []);
+  useEffect(() => { carregarPacientes(); }, [carregarPacientes]);
 
   const pacientesFiltrados = pacientes.filter(p => 
     p.nome?.toLowerCase().includes(busca.toLowerCase()) || 
@@ -66,9 +76,11 @@ export default function ListaPacientes() {
       
       {/* MARCA D'ÁGUA PADRONIZADA */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-10 select-none">
-        <img 
+        <Image 
           src="/logocs.png" 
           alt="" 
+          width={600}
+          height={600}
           className="w-full max-w-2xl opacity-[0.08] grayscale object-contain"
         />
       </div>
@@ -115,7 +127,7 @@ export default function ListaPacientes() {
               {pacientesFiltrados.map((p) => (
                 <Link 
                   key={p.id} 
-                  href={`/pacientes/${p.id}`}
+                  href={`/pacientes/perfil?id=${p.id}`}
                   className="group relative bg-white/60 backdrop-blur-md p-6 rounded-[35px] border border-slate-100 shadow-sm hover:shadow-xl hover:border-teal-200 transition-all duration-300 overflow-hidden"
                 >
                   <div className="flex items-center gap-4 mb-4">
